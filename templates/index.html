@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tic-Tac-Toe 15x15</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 900px;
+        }
+        
+        h1 {
+            text-align: center;
+            color: #667eea;
+            margin-bottom: 20px;
+        }
+        
+        .game-info {
+            display: flex;
+            justify-content: space-between;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            margin-bottom: 15px;
+        }
+        
+        .board-container {
+            max-height: 600px;
+            overflow: auto;
+            padding: 10px;
+            background: #ecf0f1;
+            border-radius: 15px;
+        }
+        
+        .board {
+            display: grid;
+            grid-template-columns: repeat(15, 35px);
+            gap: 3px;
+            margin: 0 auto;
+            width: fit-content;
+        }
+        
+        .cell {
+            width: 35px;
+            height: 35px;
+            background: white;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            font-size: 1.2em;
+            font-weight: bold;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+        
+        .cell:hover:not(.occupied) {
+            background: #f0f0f0;
+            transform: scale(1.1);
+            border-color: #667eea;
+        }
+        
+        .cell.occupied { cursor: not-allowed; }
+        .cell.x { color: #e74c3c; }
+        .cell.o { color: #3498db; }
+        .cell.last-move {
+            background: #dfe6e9;
+            border-color: #667eea;
+            border-width: 3px;
+        }
+        
+        .ai-thinking {
+            text-align: center;
+            color: #667eea;
+            font-weight: bold;
+            padding: 10px;
+            display: none;
+        }
+        .ai-thinking.active { display: block; }
+        
+        .controls {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin-top: 15px;
+        }
+        
+        .btn {
+            padding: 12px 25px;
+            border: none;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+        .btn-primary:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+        }
+        
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            margin-top: 15px;
+        }
+        
+        .stat-card {
+            background: #f8f9fa;
+            padding: 12px;
+            border-radius: 10px;
+            text-align: center;
+        }
+        
+        .stat-value {
+            font-size: 1.8em;
+            font-weight: bold;
+            color: #667eea;
+        }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            justify-content: center;
+            align-items: center;
+        }
+        .modal.active { display: flex; }
+        
+        .modal-content {
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            text-align: center;
+        }
+        
+        .modal-title {
+            font-size: 2em;
+            margin-bottom: 20px;
+            color: #667eea;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎮 Tic-Tac-Toe 15x15</h1>
+        
+        <div class="game-info">
+            <div>Lượt: <span id="current-player" style="font-weight:bold"></span></div>
+            <div>Nước đi: <span id="move-count">0</span>/225</div>
+        </div>
+        
+        <div class="ai-thinking" id="ai-thinking">🤖 AI đang suy nghĩ...</div>
+        
+        <div class="board-container">
+            <div class="board" id="board"></div>
+        </div>
+        
+        <div class="controls">
+            <button class="btn btn-primary" onclick="newGame()">🔄 Game Mới</button>
+            <button class="btn btn-primary" onclick="undoMove()">↩️ Hoàn Tác</button>
+        </div>
+        
+        <div class="stats">
+            <div class="stat-card">
+                <div class="stat-value" id="stat-wins">0</div>
+                <div>Bạn Thắng</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="stat-draws">0</div>
+                <div>Hòa</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="stat-losses">0</div>
+                <div>AI Thắng</div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="modal" id="modal">
+        <div class="modal-content">
+            <div class="modal-title" id="modal-title"></div>
+            <div id="modal-message"></div>
+            <button class="btn btn-primary" onclick="closeModal()">OK</button>
+        </div>
+    </div>
+    
+    <script>
+        const SIZE = 15;
+        let board = [];
+        let currentPlayer = 1; // 1=X(user), 2=O(AI)
+        let gameOver = false;
+        let moveHistory = [];
+        let lastMoveRow = 7;
+        let lastMoveCol = 7;
+        let stats = { wins: 0, draws: 0, losses: 0 };
+        
+        function initBoard() {
+            board = Array(SIZE).fill().map(() => Array(SIZE).fill(0));
+            currentPlayer = 1;
+            gameOver = false;
+            moveHistory = [];
+            lastMoveRow = 7;
+            lastMoveCol = 7;
+            renderBoard();
+            updateDisplay();
+        }
+        
+        function renderBoard() {
+            const boardEl = document.getElementById('board');
+            boardEl.innerHTML = '';
+            
+            for (let r = 0; r < SIZE; r++) {
+                for (let c = 0; c < SIZE; c++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'cell';
+                    cell.dataset.row = r;
+                    cell.dataset.col = c;
+                    
+                    if (board[r][c] === 1) {
+                        cell.textContent = 'X';
+                        cell.classList.add('x', 'occupied');
+                    } else if (board[r][c] === 2) {
+                        cell.textContent = 'O';
+                        cell.classList.add('o', 'occupied');
+                    } else {
+                        cell.onclick = handleCellClick;
+                    }
+                    
+                    if (r === lastMoveRow && c === lastMoveCol) {
+                        cell.classList.add('last-move');
+                    }
+                    
+                    boardEl.appendChild(cell);
+                }
+            }
+        }
+        
+        function handleCellClick(e) {
+            if (gameOver || currentPlayer !== 1) return;
+            
+            const row = parseInt(e.target.dataset.row);
+            const col = parseInt(e.target.dataset.col);
+            makeMove(row, col);
+        }
+        
+        async function makeMove(row, col) {
+            if (board[row][col] !== 0) return;
+            
+            board[row][col] = currentPlayer;
+            moveHistory.push({ row, col, player: currentPlayer });
+            lastMoveRow = row;
+            lastMoveCol = col;
+            renderBoard();
+            updateDisplay();
+            
+            // ✅ GAME LOGIC: Kiểm tra thắng/hòa
+            const winner = checkWinner();
+            if (winner !== 0) {
+                endGame(winner);
+                return;
+            }
+            
+            // Đổi lượt
+            currentPlayer = currentPlayer === 1 ? 2 : 1;
+            updateDisplay();
+            
+            // Lượt AI
+            if (currentPlayer === 2 && !gameOver) {
+                await aiMove();
+            }
+        }
+        
+        async function aiMove() {
+            document.getElementById('ai-thinking').classList.add('active');
+            
+            try {
+                const response = await fetch('/ai_move', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        board: board,
+                        player: 2,
+                        last_move_row: lastMoveRow,
+                        last_move_col: lastMoveCol
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.row !== -1 && data.col !== -1) {
+                    await new Promise(r => setTimeout(r, 500));
+                    makeMove(data.row, data.col);
+                } else {
+                    alert('AI lỗi!');
+                    currentPlayer = 1;
+                    updateDisplay();
+                }
+            } catch (error) {
+                alert('Lỗi kết nối!');
+                currentPlayer = 1;
+                updateDisplay();
+            } finally {
+                document.getElementById('ai-thinking').classList.remove('active');
+            }
+        }
+        
+        function checkWinner() {
+            // ✅ GAME LOGIC: Kiểm tra 5 liên tiếp
+            const directions = [[0,1], [1,0], [1,1], [1,-1]];
+            
+            for (let r = 0; r < SIZE; r++) {
+                for (let c = 0; c < SIZE; c++) {
+                    const player = board[r][c];
+                    if (player === 0) continue;
+                    
+                    for (const [dr, dc] of directions) {
+                        let count = 1;
+                        let nr = r + dr, nc = c + dc;
+                        
+                        while (nr >= 0 && nr < SIZE && nc >= 0 && nc < SIZE && board[nr][nc] === player) {
+                            count++;
+                            nr += dr;
+                            nc += dc;
+                        }
+                        
+                        if (count >= 5) {
+                            return player; // Thắng!
+                        }
+                    }
+                }
+            }
+            
+            // ✅ GAME LOGIC: Kiểm tra hòa (board đầy)
+            for (let r = 0; r < SIZE; r++) {
+                for (let c = 0; c < SIZE; c++) {
+                    if (board[r][c] === 0) {
+                        return 0; // Còn ô trống → tiếp tục
+                    }
+                }
+            }
+            
+            return -1; // Board đầy → hòa
+        }
+        
+        function endGame(winner) {
+            gameOver = true;
+            
+            let title, message;
+            if (winner === 1) {
+                title = '🎉 Thắng!';
+                message = 'Bạn đã thắng AI!';
+                stats.wins++;
+            } else if (winner === 2) {
+                title = '😢 Thua!';
+                message = 'AI đã thắng!';
+                stats.losses++;
+            } else {
+                title = '🤝 Hòa!';
+                message = 'Board đầy - Hòa!';
+                stats.draws++;
+            }
+            
+            updateStats();
+            showModal(title, message);
+        }
+        
+        function showModal(title, message) {
+            document.getElementById('modal-title').textContent = title;
+            document.getElementById('modal-message').textContent = message;
+            document.getElementById('modal').classList.add('active');
+        }
+        
+        function closeModal() {
+            document.getElementById('modal').classList.remove('active');
+        }
+        
+        function updateDisplay() {
+            const playerText = currentPlayer === 1 ? 'X (Bạn)' : 'O (AI)';
+            document.getElementById('current-player').textContent = playerText;
+            document.getElementById('move-count').textContent = moveHistory.length;
+        }
+        
+        function updateStats() {
+            document.getElementById('stat-wins').textContent = stats.wins;
+            document.getElementById('stat-draws').textContent = stats.draws;
+            document.getElementById('stat-losses').textContent = stats.losses;
+        }
+        
+        function newGame() {
+            closeModal();
+            initBoard();
+        }
+        
+        function undoMove() {
+            if (moveHistory.length === 0 || gameOver) return;
+            
+            // Hoàn tác 2 nước (AI + Player)
+            if (moveHistory.length > 0) {
+                const last = moveHistory.pop();
+                board[last.row][last.col] = 0;
+            }
+            if (moveHistory.length > 0) {
+                const last = moveHistory.pop();
+                board[last.row][last.col] = 0;
+                lastMoveRow = last.row;
+                lastMoveCol = last.col;
+            }
+            
+            currentPlayer = 1;
+            renderBoard();
+            updateDisplay();
+        }
+        
+        // Khởi tạo
+        initBoard();
+        updateStats();
+    </script>
+</body>
+</html>

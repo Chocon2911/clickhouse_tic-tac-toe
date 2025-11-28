@@ -143,7 +143,7 @@ def query_odd_table(board: list) -> int:
             continue
         
         table_name = f"ttt_5_l{level}"
-        sql = f"SELECT COUNT(win_actor) FROM {table_name} WHERE {where_clause} AND win_actor = 'X'"
+        sql = f"SELECT COUNT(win_actor) FROM {table_name} WHERE {where_clause}"
         
         count = execute_query(sql)
         total_count += count
@@ -175,7 +175,7 @@ def query_even_table(board: list) -> int:
             continue
         
         table_name = f"ttt_5_l{level}"
-        sql = f"SELECT COUNT(win_actor) FROM {table_name} WHERE {where_clause} AND win_actor = 'O'"
+        sql = f"SELECT COUNT(win_actor) FROM {table_name} WHERE {where_clause}"
         
         count = execute_query(sql)
         total_count += count
@@ -201,7 +201,7 @@ def query_draw_table(board: list) -> int:
     where_clause = build_where_clause(board)
     
     # Query table ttt_5_draw
-    sql = f"SELECT COUNT(win_actor) FROM ttt_5_draw WHERE {where_clause} AND win_actor = 'D'"
+    sql = f"SELECT COUNT(win_actor) FROM ttt_5_draw WHERE {where_clause}"
     
     return execute_query(sql)
 
