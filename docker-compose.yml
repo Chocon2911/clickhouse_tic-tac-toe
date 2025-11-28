@@ -1,0 +1,25 @@
+services:
+  clickhouse:
+    image: clickhouse/clickhouse-server:latest
+    container_name: clickhouse
+    ports:
+      - "8123:8123"   # HTTP API
+      - "9000:9000"   # Native
+    environment:
+      CLICKHOUSE_USER: "default"
+      CLICKHOUSE_PASSWORD: "admin"
+    volumes:
+      - clickhouse_data:/var/lib/clickhouse
+      - clickhouse_logs:/var/log/clickhouse-server
+      - ./data:/data            # Mount CSV vào container (nếu bạn muốn check trực tiếp)
+      - ./schema:/schema        # Mount schema (tùy chọn)
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -s http://localhost:8123/ping | grep -q 'Ok'"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+volumes:
+  clickhouse_data:
+  clickhouse_logs:
